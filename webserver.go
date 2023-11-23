@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"os"
 	"strings"
+	"time"
 )
 
 func handleRequest(conn net.Conn) {
@@ -28,9 +30,35 @@ func handleRequest(conn net.Conn) {
 	}
 
 	path := parts[1]
-	response := fmt.Sprintf("HTTP/1.1 200 OK\r\n\r\nRequested path: %s\r\n", path)
+
+	content, err := serveHTML(path)
+
+	if err != nil {
+		response := fmt.Sprintf("HTTP/1.1 400 Not Found\r\n\r %s\r\n", err.Error())
+		conn.Write([]byte(response))
+		return
+	}
+	response := fmt.Sprintf("HTTP/1.1 200 OK\r\n\r\n %s\r\n", content)
 
 	conn.Write([]byte(response))
+
+	time.Sleep(20 * time.Second)
+
+	conn.Close()
+}
+
+func serveHTML(path string) (string, error) {
+	if path == "/" {
+		path = "/index.html"
+	}
+
+	content, err := os.ReadFile("www" + path)
+
+	if err != nil {
+		return "", fmt.Errorf("Not Found")
+	}
+
+	return string(content), nil
 }
 
 func main() {
